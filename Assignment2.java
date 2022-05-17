@@ -5,17 +5,14 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * TCPClient
  */
-public class TCPClient {
-    public static List<Server> listOfServers;
-    private static String largestServerType;
+public class Assignment2 {
     public static void main(String[] args) throws Exception {
         Socket socket = new Socket("localhost", 50000);
-        String[] handShake = new String[] {"helo", "auth shubham", "redy"};
+        String[] handShake = new String[] {"HELO", "AUTH shubham", "REDY"};
 
         DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
 
@@ -24,7 +21,7 @@ public class TCPClient {
 
         for(String hand: handShake) {
             reqString = hand;
-            System.out.println("Client Says " + reqString);
+            System.out.println("Client Says: " + reqString);
             dout.write((reqString + "\n").getBytes());
             dout.flush();
             respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
@@ -32,40 +29,34 @@ public class TCPClient {
         }
 
         Job job = parseJob(respString);
-        reqString = "gets capable " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobDisk());
+        reqString = "GETS Capable " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " " + String.valueOf(job.getJobDisk());
         System.out.println("Client says: " + reqString);
         dout.write((reqString + "\n").getBytes());
         dout.flush();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        
-
-        reqString = "ok";
+        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+        System.out.println("Server says: " + respString);
+        reqString = "OK";
         System.out.println("Client says: " + reqString);
+        dout.write((reqString + "\n").getBytes());
+        dout.flush();
+        
+        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        serverSegregation(reader);
 
-        while(true) {
-
-            break;
-        }
         socket.close();
     }
 
     public static void serverSegregation(BufferedReader reader) throws IOException {
-        System.out.println("Start of finding largest server logic:");
-        List<Server> listOfUnfilteredServers = new ArrayList<Server>();
+        List<Server> capableServers = new ArrayList<Server>();
         while(reader.ready()) {
             String serverResponse = reader.readLine();
             System.out.println("SERVER INFO: " + serverResponse);
-            listOfUnfilteredServers.add(serverInfo(serverResponse));
+            capableServers.add(serverInfo(serverResponse));
         }
-        int largestCoreCount = 0;
-        for(Server server: listOfUnfilteredServers) {
-            if(server.getServerCore() > largestCoreCount) {
-                largestCoreCount = server.getServerCore();
-                largestServerType = server.getServerType();
-            }
+
+        for(Server ser: capableServers) {
+        	System.out.println(ser.toString());
         }
-        listOfServers = listOfUnfilteredServers.stream().filter(server -> server.getServerType().equalsIgnoreCase(largestServerType))
-            .collect(Collectors.toList());
       }
 
     public static Job parseJob(String jobString) {
@@ -83,6 +74,7 @@ public class TCPClient {
 
     public static Server serverInfo(String serverString) {
         String[] serverInfoArray = serverString.split(" ");
+        System.out.println(serverInfoArray);
         Server server = new Server();
         server.setServerType(serverInfoArray[0]);
         server.setServerID(Integer.parseInt(serverInfoArray[1]));
@@ -144,7 +136,10 @@ class Job {
     public Integer getJobCore() {
         return jobCore;
     }
-
+    
+public Integer getJobMem() {
+        return jobMem;
+      }
     public Integer getJobDisk() {
         return jobDisk;
     }
@@ -231,5 +226,13 @@ class Server {
   
     public int getServerRJobs() {
       return serverRJobs;
+    }
+
+    public String toString() {
+        return "Server Type: " + serverType + " Server ID: " + String.valueOf(serverID) + 
+            " Server State: " + serverState + " Server Start Time: " + serverStartTime + 
+            " Server Core: " + String.valueOf(serverCore) + " Server Memory: " + String.valueOf(serverMemory) + 
+            " Server Disk: " + String.valueOf(serverDisk) + " Server With Jobs: " + String.valueOf(serverWJobs)
+            + " Server Running Jobs: " + String.valueOf(serverRJobs);
     }
 }
