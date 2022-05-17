@@ -1,13 +1,18 @@
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * TCPClient
  */
 public class TCPClient {
-
+    public static List<Server> listOfServers;
+    private static String largestServerType;
     public static void main(String[] args) throws Exception {
         Socket socket = new Socket("localhost", 50000);
         String[] handShake = new String[] {"helo", "auth shubham", "redy"};
@@ -31,10 +36,37 @@ public class TCPClient {
         System.out.println("Client says: " + reqString);
         dout.write((reqString + "\n").getBytes());
         dout.flush();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         
 
+        reqString = "ok";
+        System.out.println("Client says: " + reqString);
+
+        while(true) {
+
+            break;
+        }
         socket.close();
     }
+
+    public static void serverSegregation(BufferedReader reader) throws IOException {
+        System.out.println("Start of finding largest server logic:");
+        List<Server> listOfUnfilteredServers = new ArrayList<Server>();
+        while(reader.ready()) {
+            String serverResponse = reader.readLine();
+            System.out.println("SERVER INFO: " + serverResponse);
+            listOfUnfilteredServers.add(serverInfo(serverResponse));
+        }
+        int largestCoreCount = 0;
+        for(Server server: listOfUnfilteredServers) {
+            if(server.getServerCore() > largestCoreCount) {
+                largestCoreCount = server.getServerCore();
+                largestServerType = server.getServerType();
+            }
+        }
+        listOfServers = listOfUnfilteredServers.stream().filter(server -> server.getServerType().equalsIgnoreCase(largestServerType))
+            .collect(Collectors.toList());
+      }
 
     public static Job parseJob(String jobString) {
         String[] jobInfo = jobString.split(" ");
