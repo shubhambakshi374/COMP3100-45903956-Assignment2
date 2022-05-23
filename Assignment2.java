@@ -15,8 +15,6 @@ public class Assignment2 {
     Socket socket = new Socket("localhost", 50000);
 
     DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
-
-    int jobSubmitted = 0;
     String reqString = "", respString = "";
 
     //handshake
@@ -100,19 +98,6 @@ public class Assignment2 {
       return bestServer;
   }
 
-
-
-  public static Server getCandidateServer(List<Server> capableServers, Job job) {
-    Integer largeCount = 0;
-    Server nextCandidate = new Server();
-    for (Server server : capableServers) {
-      // if(server.getServerState().equalsIgnoreCase("inactive")) {
-
-      // }
-    }
-    return nextCandidate;
-  }
-
   public static Job parseJob(String jobString) {
     String[] jobInfo = jobString.split(" ");
     Job job = new Job();
@@ -137,20 +122,6 @@ public class Assignment2 {
     server.setServerWJobs(Integer.parseInt(serverInfoArray[6]));
     server.setServerRJobs(Integer.parseInt(serverInfoArray[7]));
     return server;
-  }
-
-  public static ServerState returnServerTypeFromString(String state) {
-    if (state.equalsIgnoreCase("booting")) {
-      return ServerState.booting;
-    } else if (state.equalsIgnoreCase("active")) {
-      return ServerState.active;
-    } else if (state.equalsIgnoreCase("inactive")) {
-      return ServerState.inactive;
-    } else if (state.equalsIgnoreCase("idle")) {
-      return ServerState.idle;
-    } else {
-      return ServerState.unavailable;
-    }
   }
 }
 
