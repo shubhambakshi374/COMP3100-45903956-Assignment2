@@ -35,29 +35,42 @@ public class Assignment2 {
       dout.write(reqString.getBytes());
       dout.flush();
       respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-      Job job = parseJob(respString);
-      reqString = "GETS Capable " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
-      System.out.println("Client Says: " + reqString);
-      dout.write((reqString + "\n").getBytes());
-      dout.flush();
-      respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-      System.out.println("Server Says: " + respString);
-      reqString = "OK\n";
-      System.out.println("Client Says: " + reqString.getBytes());
-      dout.write(reqString.getBytes());
-      dout.flush();
-      BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-      List<Server> capableServers = serverSegregation(reader);
-      Server nextServer = getBestServer(capableServers);
-      if(nextServer == null) {
-
+      if(respString.contains("JOBN")) {
+        Job job = parseJob(respString);
+        reqString = "GETS Capable " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
+        System.out.println("Client Says: " + reqString);
+        dout.write((reqString + "\n").getBytes());
+        dout.flush();
+        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+        System.out.println("Server Says: " + respString);
+        reqString = "OK\n";
+        System.out.println("Client Says: " + reqString);
+        dout.write(reqString.getBytes());
+        dout.flush();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        List<Server> capableServers = serverSegregation(reader);
+        Server nextServer = getBestServer(capableServers);
+        reqString = "OK\n";
+        System.out.println("Client Says: " + reqString);
+        dout.write(reqString.getBytes());
+        dout.flush();
+        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+        System.out.println("Server Says: " + respString);
+        reqString = "SCHD " + String.valueOf(job.getJobID()) + " " + nextServer.getServerType() + " " + String.valueOf(nextServer.getServerID());
+        System.out.println("Client Says: " + reqString);
+        dout.write((reqString + "\n").getBytes());
+        dout.flush();
+        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+        System.out.println("Server Says: " + respString);
       }
-
       if (respString.equals("NONE")) {
         break;
       }
     }
-
+    reqString = "QUIT\n";
+    dout.write(reqString.getBytes());
+    dout.flush();
+    dout.close();
     socket.close();
   }
 
@@ -71,17 +84,17 @@ public class Assignment2 {
   }
 
   public static Server getBestServer(List<Server> servers) {
-    boolean idleFound = false;
     Server bestServer = new Server();
       for(Server server: servers) {
         if(server.getServerState().equalsIgnoreCase("inactive")) {
           bestServer = server;
+          System.out.println("Inactive Server Found");
           break;
-        } else if(server.getServerState().equalsIgnoreCase("active") && !idleFound) {
+        } else if(server.getServerState().equalsIgnoreCase("active")) {
           bestServer = server;
         } else if(server.getServerState().equalsIgnoreCase("idle")) {
           bestServer = server;
-          idleFound = true;
+          break;
         }
       }
       return bestServer;
@@ -114,7 +127,6 @@ public class Assignment2 {
 
   public static Server serverInfo(String serverString) {
     String[] serverInfoArray = serverString.split(" ");
-    System.out.println(serverInfoArray);
     Server server = new Server();
     server.setServerType(serverInfoArray[0]);
     server.setServerID(Integer.parseInt(serverInfoArray[1]));
