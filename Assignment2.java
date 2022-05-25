@@ -33,7 +33,7 @@ public class Assignment2 {
       respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
       if(respString.contains("JOBN")) {
         Job job = parseJob(respString);
-        reqString = "GETS AVAIL " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
+        reqString = "GETS Avail " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
         System.out.println("Client Says: " + reqString);
         dout.write((reqString + "\n").getBytes());
         dout.flush();
@@ -74,6 +74,7 @@ public class Assignment2 {
     } catch(IOException e) {
       System.out.println("error reading response from server, {}" + e.getMessage()); 
     }
+    System.out.println(bestServer.toString());
     return bestServer;
   }
 
