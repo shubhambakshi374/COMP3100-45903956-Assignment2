@@ -3,8 +3,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * TCPClient
@@ -35,7 +33,7 @@ public class Assignment2 {
       respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
       if(respString.contains("JOBN")) {
         Job job = parseJob(respString);
-        reqString = "GETS Capable " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
+        reqString = "GETS AVAIL " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
         System.out.println("Client Says: " + reqString);
         dout.write((reqString + "\n").getBytes());
         dout.flush();
@@ -46,22 +44,17 @@ public class Assignment2 {
         dout.write(reqString.getBytes());
         dout.flush();
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        List<Server> capableServers = serverSegregation(reader);
-        Server nextServer = getBestServer(capableServers);
-        reqString = "OK\n";
-        System.out.println("Client Says: " + reqString);
+        Server server = getBestServerV2(reader);
         dout.write(reqString.getBytes());
         dout.flush();
-        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-        System.out.println("Server Says: " + respString);
-        reqString = "SCHD " + String.valueOf(job.getJobID()) + " " + nextServer.getServerType() + " " + String.valueOf(nextServer.getServerID());
         System.out.println("Client Says: " + reqString);
+        reqString = "SCHD " + String.valueOf(job.getJobID()) + " " + server.getServerType() + " " + String.valueOf(server.getServerID());
         dout.write((reqString + "\n").getBytes());
         dout.flush();
+        System.out.println("Client Says: " + reqString);
         respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
         System.out.println("Server Says: " + respString);
-      }
-      if (respString.equals("NONE")) {
+      } else if (respString.equalsIgnoreCase("NONE")) {
         break;
       }
     }
@@ -72,44 +65,11 @@ public class Assignment2 {
     socket.close();
   }
 
-  public static List<Server> serverSegregation(BufferedReader reader) throws IOException {
-    List<Server> capableServers = new ArrayList<Server>();
-    while(reader.ready()) {
-      String server = reader.readLine();
-      capableServers.add(serverInfo(server));
-    }
-    return capableServers;
-  }
-
-  public static Server getBestServer(List<Server> servers) {
-    Server bestServer = new Server();
-      for(Server server: servers) {
-        if(server.getServerState().equalsIgnoreCase("inactive")) {
-          bestServer = server;
-          System.out.println("Inactive Server Found");
-          break;
-        } else if(server.getServerState().equalsIgnoreCase("active")) {
-          bestServer = server;
-        } else if(server.getServerState().equalsIgnoreCase("idle")) {
-          bestServer = server;
-          break;
-        }
-      }
-      return bestServer;
-  }
-
   public static Server getBestServerV2(BufferedReader reader) {
     Server bestServer = new Server();
     try {
       while(reader.ready()) {
-        Server server = serverInfo(reader.readLine());
-        if(server.getServerState().equalsIgnoreCase("active") || server.getServerState().equalsIgnoreCase("idle")) {
-          return server;
-        } else if(server.getServerState().equalsIgnoreCase("booting")) {
-          return server;
-        } else {
-          bestServer = server;
-        } 
+        bestServer = serverInfo(reader.readLine());
       }
     } catch(IOException e) {
       System.out.println("error reading response from server, {}" + e.getMessage()); 
