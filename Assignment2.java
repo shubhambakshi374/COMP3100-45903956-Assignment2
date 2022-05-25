@@ -98,6 +98,25 @@ public class Assignment2 {
       return bestServer;
   }
 
+  public static Server getBestServerV2(BufferedReader reader) {
+    Server bestServer = new Server();
+    try {
+      while(reader.ready()) {
+        Server server = serverInfo(reader.readLine());
+        if(server.getServerState().equalsIgnoreCase("active") || server.getServerState().equalsIgnoreCase("idle")) {
+          return server;
+        } else if(server.getServerState().equalsIgnoreCase("booting")) {
+          return server;
+        } else {
+          bestServer = server;
+        } 
+      }
+    } catch(IOException e) {
+      System.out.println("error reading response from server, {}" + e.getMessage()); 
+    }
+    return bestServer;
+  }
+
   public static Job parseJob(String jobString) {
     String[] jobInfo = jobString.split(" ");
     Job job = new Job();
