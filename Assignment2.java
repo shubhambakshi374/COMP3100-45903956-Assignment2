@@ -3,7 +3,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
-
 /**
  * TCPClient
  */
@@ -19,44 +18,43 @@ public class Assignment2 {
     String[] handShake = new String[] { "HELO", "AUTH shubham" };
     for (String hand : handShake) {
       reqString = hand;
-      System.out.println("Client Says: " + reqString);
+      dout.write((reqString + "\n").getBytes());
+      dout.flush();
+      System.out.println("Line 24: Client Says: " + reqString);
+      respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+      System.out.println("Line 26: Server says: " + respString);
+    }
+    
+    while (true) {
+      // Asking ds-sim for job
+      reqString = "REDY";
       dout.write((reqString + "\n").getBytes());
       dout.flush();
       respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-      System.out.println("Server says: " + respString);
-    }
-    //scheduling jobs
-    while (true) {
-      reqString = "REDY\n";
-      dout.write(reqString.getBytes());
-      dout.flush();
-      respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+
       if(respString.contains("JOBN")) {
+        // parse jobs
         Job job = parseJob(respString);
-        reqString = "GETS Avail " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " "  + String.valueOf(job.getJobDisk());
-        System.out.println("Client Says: " + reqString);
+
+        // get capable servers
+        reqString = "GETS Capable " + job.getJobCore() + " " + job.getJobMem() + " " + job.getJobDisk();
         dout.write((reqString + "\n").getBytes());
         dout.flush();
-        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-        System.out.println("Server Says: " + respString);
-        reqString = "OK\n";
-        System.out.println("Client Says: " + reqString);
-        dout.write(reqString.getBytes());
-        dout.flush();
+        dout.wait();
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         Server server = getBestServerV2(reader);
-        dout.write(reqString.getBytes());
-        dout.flush();
-        System.out.println("Client Says: " + reqString);
-        reqString = "SCHD " + String.valueOf(job.getJobID()) + " " + server.getServerType() + " " + String.valueOf(server.getServerID());
+
+        // sched job to server
+        reqString = "SCHD " + job.getJobID() + " " + server.getServerType() + " " + server.getServerID();
         dout.write((reqString + "\n").getBytes());
         dout.flush();
-        System.out.println("Client Says: " + reqString);
+        dout.wait();
         respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-        System.out.println("Server Says: " + respString);
-      } else if (respString.equalsIgnoreCase("NONE")) {
-        break;
+
+      } else if(respString.contains("NONE")) {
+
       }
+      break;
     }
     reqString = "QUIT\n";
     dout.write(reqString.getBytes());
@@ -65,16 +63,15 @@ public class Assignment2 {
     socket.close();
   }
 
-  public static Server getBestServerV2(BufferedReader reader) {
-    Server bestServer = new Server();
-    try {
+  public static Server getBestServerV2(BufferedReader reader) throws IOException {
+      Server bestServer = new Server();
       while(reader.ready()) {
-        bestServer = serverInfo(reader.readLine());
+        String serverString = reader.readLine();
+        if(!serverString.equalsIgnoreCase(".")) {
+          bestServer = serverInfo(serverString);
+        }
       }
-    } catch(IOException e) {
-      System.out.println("error reading response from server, {}" + e.getMessage()); 
-    }
-    System.out.println(bestServer.toString());
+    
     return bestServer;
   }
 
@@ -91,17 +88,21 @@ public class Assignment2 {
   }
 
   public static Server serverInfo(String serverString) {
-    String[] serverInfoArray = serverString.split(" ");
-    Server server = new Server();
-    server.setServerType(serverInfoArray[0]);
-    server.setServerID(Integer.parseInt(serverInfoArray[1]));
-    server.setServerState(serverInfoArray[2]);
-    server.setServerStartTime(serverInfoArray[3]);
-    server.setServerCore(Integer.parseInt(serverInfoArray[4]));
-    server.setServerMemory(Integer.parseInt(serverInfoArray[5]));
-    server.setServerWJobs(Integer.parseInt(serverInfoArray[6]));
-    server.setServerRJobs(Integer.parseInt(serverInfoArray[7]));
-    return server;
+    if(!serverString.isEmpty()) {
+      String[] serverInfoArray = serverString.split(" ");
+      Server server = new Server();
+      server.setServerType(serverInfoArray[0]);
+      server.setServerID(Integer.parseInt(serverInfoArray[1]));
+      server.setServerState(serverInfoArray[2]);
+      server.setServerStartTime(serverInfoArray[3]);
+      server.setServerCore(Integer.parseInt(serverInfoArray[4]));
+      server.setServerMemory(Integer.parseInt(serverInfoArray[5]));
+      server.setServerWJobs(Integer.parseInt(serverInfoArray[6]));
+      server.setServerRJobs(Integer.parseInt(serverInfoArray[7]));
+      return server;
+    } else {
+      return null;
+    }
   }
 }
 
