@@ -3,15 +3,28 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+// import java.util.ArrayList;
+import java.util.HashMap;
+// import java.util.HashSet;
+import java.util.List;
+// import java.util.Set;
+// import java.util.stream.Collectors;
+
 /**
  * TCPClient
  */
 public class Assignment2 {
 
-  public static void main(String[] args) throws Exception {
-    Socket socket = new Socket("localhost", 50000);
+  static Integer NOS;
+  static HashMap<Integer, List<Server>> serverMap = new HashMap<Integer, List<Server>>();
+  static Socket socket = null;
+  static DataOutputStream dout = null;
 
-    DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
+
+  public static void main(String[] args) throws Exception {
+    socket = new Socket("localhost", 50000);
+
+    dout = new DataOutputStream(socket.getOutputStream());
     String reqString = "", respString = "";
 
     //handshake
@@ -20,42 +33,35 @@ public class Assignment2 {
       reqString = hand;
       dout.write((reqString + "\n").getBytes());
       dout.flush();
-      System.out.println("Line 24: Client Says: " + reqString);
       respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-      System.out.println("Line 26: Server says: " + respString);
     }
-    
-    while (true) {
-      // Asking ds-sim for job
+
+    while(true) {
       reqString = "REDY";
       dout.write((reqString + "\n").getBytes());
       dout.flush();
       respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-
       if(respString.contains("JOBN")) {
-        // parse jobs
         Job job = parseJob(respString);
+        Server server = getCapableServers(job);
 
-        // get capable servers
-        reqString = "GETS Capable " + job.getJobCore() + " " + job.getJobMem() + " " + job.getJobDisk();
+
+        // send ok
+        reqString = "OK";
         dout.write((reqString + "\n").getBytes());
         dout.flush();
-        dout.wait();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        Server server = getBestServerV2(reader);
+        respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
 
-        // sched job to server
+        //Schedule a job
         reqString = "SCHD " + job.getJobID() + " " + server.getServerType() + " " + server.getServerID();
         dout.write((reqString + "\n").getBytes());
         dout.flush();
-        dout.wait();
         respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
-
       } else if(respString.contains("NONE")) {
-
+        break;
       }
-      break;
     }
+
     reqString = "QUIT\n";
     dout.write(reqString.getBytes());
     dout.flush();
@@ -63,16 +69,38 @@ public class Assignment2 {
     socket.close();
   }
 
-  public static Server getBestServerV2(BufferedReader reader) throws IOException {
-      Server bestServer = new Server();
-      while(reader.ready()) {
-        String serverString = reader.readLine();
-        if(!serverString.equalsIgnoreCase(".")) {
-          bestServer = serverInfo(serverString);
-        }
+  public static Server getCapableServers(Job job) throws IOException {
+    String reqString = "GETS Capable " + String.valueOf(job.getJobCore()) + " " + String.valueOf(job.getJobMem()) + " " + String.valueOf(job.getJobDisk());
+    dout.write((reqString + "\n").getBytes());
+    dout.flush();
+    String respString = new BufferedReader(new InputStreamReader(socket.getInputStream())).readLine();
+    NOS = Integer.parseInt(respString.split(" ")[1]);
+    if(NOS > 0) {
+      reqString = "OK";
+      dout.write((reqString + "\n").getBytes());
+      dout.flush();
+      BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+      // System.out.println(reader.readLine());
+      return getBestServer(reader);
+    } else {
+      reqString = "OK";
+      dout.write((reqString + "\n").getBytes());
+      dout.flush();
+      getCapableServers(job);
+    }
+    return null;
+  }
+
+  public static Server getBestServer(BufferedReader reader) throws IOException {
+    Server server = new Server();
+    for(int i=0; i < NOS; i++) {
+      String line = reader.readLine();
+      server = serverInfo(line);
+      if(server.getServerState().equalsIgnoreCase("booting") || server.getServerState().equalsIgnoreCase("active") || server.getServerState().equalsIgnoreCase("idle")) {
+        return server;
       }
-    
-    return bestServer;
+    }
+    return server;
   }
 
   public static Job parseJob(String jobString) {
@@ -88,21 +116,17 @@ public class Assignment2 {
   }
 
   public static Server serverInfo(String serverString) {
-    if(!serverString.isEmpty()) {
-      String[] serverInfoArray = serverString.split(" ");
-      Server server = new Server();
-      server.setServerType(serverInfoArray[0]);
-      server.setServerID(Integer.parseInt(serverInfoArray[1]));
-      server.setServerState(serverInfoArray[2]);
-      server.setServerStartTime(serverInfoArray[3]);
-      server.setServerCore(Integer.parseInt(serverInfoArray[4]));
-      server.setServerMemory(Integer.parseInt(serverInfoArray[5]));
-      server.setServerWJobs(Integer.parseInt(serverInfoArray[6]));
-      server.setServerRJobs(Integer.parseInt(serverInfoArray[7]));
-      return server;
-    } else {
-      return null;
-    }
+    String[] serverInfoArray = serverString.split(" ");
+    Server server = new Server();
+    server.setServerType(serverInfoArray[0]);
+    server.setServerID(Integer.parseInt(serverInfoArray[1]));
+    server.setServerState(serverInfoArray[2]);
+    server.setServerStartTime(serverInfoArray[3]);
+    server.setServerCore(Integer.parseInt(serverInfoArray[4]));
+    server.setServerMemory(Integer.parseInt(serverInfoArray[5]));
+    server.setServerWJobs(Integer.parseInt(serverInfoArray[6]));
+    server.setServerRJobs(Integer.parseInt(serverInfoArray[7]));
+    return server;
   }
 }
 
@@ -164,13 +188,6 @@ class Job {
   }
 }
 
-enum ServerState {
-  booting,
-  active,
-  inactive,
-  idle,
-  unavailable,
-}
 
 class Server {
 
